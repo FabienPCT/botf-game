@@ -112,7 +112,7 @@ export default function StageCard({
   const option         = opt ? stage.options[opt] : null;
   const effectiveOption = option ?? Object.values(stage.options || {})[0] ?? null;
   const tables         = released ? (effectiveOption?.tables ?? []) : [];
-
+if (stage.id === 4) console.log(`S4 debug | released=${released} | opt=${opt} | optionKeys=${JSON.stringify(Object.keys(stage.options||{}))} | tables=${tables.length} | effectiveTables=${effectiveOption?.tables?.length ?? 'none'}`);
   // ── locked ──
   if (!released) {
     return (
