@@ -1,5 +1,6 @@
 // src/components/StageCard.js
 import { useState } from "react";
+import Stage6SagTool from "./Stage6SagTool";  // ← ADD
 
 const OPT_COLORS = {
   A: "bg-yellow-900 border-yellow-600 text-yellow-200",
@@ -81,20 +82,13 @@ function DataTable({ table, clr }) {
 // ── WellTablePanel — groups tables by well, shows casing + survey ─────────────
 function WellTablePanel({ tables, clr, stageId, opt }) {
 
-  // Group consecutive pairs: even index = survey OR casing, odd = the other
-  // Tables alternate: Survey, Casing, Survey, Casing ...
-  // We detect by checking title for "Casing"
   const wells = [];
   for (let i = 0; i < tables.length; i++) {
     const t = tables[i];
     const isCasing = t.title.toLowerCase().includes("casing");
-    const isSurvey = !isCasing;
-
-    // Extract well name from title (e.g. "A01-QC — Directional Survey" → "A01")
     const nameMatch = t.title.match(/^([A-Za-z0-9]+(?:-[A-Za-z]+)?)/);
     const wellName  = nameMatch ? nameMatch[1] : `Well ${i}`;
 
-    // Find or create well entry
     let well = wells.find(w => w.name === wellName);
     if (!well) { well = { name: wellName, survey: null, casing: null }; wells.push(well); }
     if (isCasing) well.casing = t;
@@ -124,8 +118,6 @@ function WellTablePanel({ tables, clr, stageId, opt }) {
 
   return (
     <div className="rounded-lg border border-gray-700 overflow-hidden">
-
-      {/* Header bar */}
       <div className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-800 border-b border-gray-700">
         <span className={`text-xs font-bold ${clr.text}`}>📊 DATA TABLES — {wells.length} wells</span>
         <button onClick={downloadAllCSV}
@@ -133,8 +125,6 @@ function WellTablePanel({ tables, clr, stageId, opt }) {
           ⬇ All CSV
         </button>
       </div>
-
-      {/* Well selector */}
       <div className="px-3 py-2 bg-gray-850 border-b border-gray-700">
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-400 shrink-0">Well:</span>
@@ -147,7 +137,6 @@ function WellTablePanel({ tables, clr, stageId, opt }) {
               <option key={w.name} value={w.name}>{w.name}</option>
             ))}
           </select>
-          {/* Prev / Next buttons */}
           <button
             onClick={() => {
               const idx = wells.findIndex(w => w.name === selectedWell);
@@ -167,8 +156,6 @@ function WellTablePanel({ tables, clr, stageId, opt }) {
           </span>
         </div>
       </div>
-
-      {/* Casing on top, Survey below */}
       <div className="p-3 space-y-3 bg-gray-900">
         {current?.casing && <DataTable table={current.casing} clr={clr} />}
         {current?.survey && <DataTable table={current.survey} clr={clr} />}
@@ -191,10 +178,9 @@ export default function StageCard({
   const effectiveOption = option ?? Object.values(stage.options || {})[0] ?? null;
   const tables          = released ? (effectiveOption?.tables ?? []) : [];
 
-  // Decide layout: use well-panel for stage 4 (many wells), plain list otherwise
   const useWellPanel = stage.id === 4 && tables.length > 2;
 
-  // ── locked ──
+  // ── locked ──────────────────────────────────────────────────
   if (!released) {
     return (
       <div className="rounded-xl border border-gray-700 overflow-hidden">
@@ -211,6 +197,12 @@ export default function StageCard({
     );
   }
 
+  // ── Stage 6 — BHA Sag Correction interactive tool ───────────  ← ADD
+  if (stage.id === 6) {                                           // ← ADD
+    return <Stage6SagTool option={opt ?? "A"} clr={clr} />;      // ← ADD
+  }                                                               // ← ADD
+
+  // ── released (all other stages) ─────────────────────────────
   const downloadAllCSV = () => {
     const esc = v => `"${String(v).replace(/"/g, '""')}"`;
     let csv = "";
@@ -229,7 +221,6 @@ export default function StageCard({
     URL.revokeObjectURL(url);
   };
 
-  // ── released ──
   return (
     <div className={`rounded-xl border ${clr.border} overflow-hidden fadein`}>
 
@@ -272,7 +263,7 @@ export default function StageCard({
           </div>
         )}
 
-        {/* data tables — well panel for stage 4, plain list for others */}
+        {/* data tables */}
         {tables.length > 0 && (
           useWellPanel
             ? <WellTablePanel tables={tables} clr={clr} stageId={stage.id} opt={opt} />
