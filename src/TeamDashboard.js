@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase.js";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { STAGES } from "./data/stages/index";
+import { STAGES } from "./data/stages/index.js";
 import { TEAMS, CLR } from "./data/teams.js";
 import Login            from "./components/Login.js";
 import StageCard        from "./components/StageCard.js";
