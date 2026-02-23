@@ -12,18 +12,31 @@ const OPT_LABEL = { A: "Opt A", B: "Opt B", C: "Opt C" };
 
 // ── DataTable ─────────────────────────────────────────────────
 function DataTable({ table, clr }) {
-  const [copied, setCopied] = useState(false);
-
   const copyTSV = () => {
-    const lines = [
-      table.headers.join("\t"),
-      ...table.rows.map(r => r.join("\t")),
-    ];
-    navigator.clipboard.writeText(lines.join("\n")).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    });
-  };
+  const lines = [
+    table.headers.join("\t"),
+    ...table.rows.map(r => r.join("\t")),
+  ];
+  navigator.clipboard.writeText(lines.join("\n")).then(() => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  });
+};
+
+const downloadCSV = () => {
+  const esc = v => `"${String(v).replace(/"/g,'""')}"`;
+  const csv = [
+    table.headers.map(esc).join(","),
+    ...table.rows.map(r => r.map(esc).join(",")),
+  ].join("\n");
+  const blob = new Blob([csv], { type:"text/csv" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url;
+  a.download = `${table.title.replace(/[^a-z0-9]/gi,"_")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
   return (
     <div className="mt-3 rounded-lg border border-gray-700 overflow-hidden">
@@ -34,14 +47,20 @@ function DataTable({ table, clr }) {
           {table.note && (
             <p className="text-xs text-gray-400 mt-0.5 leading-snug">{table.note}</p>
           )}
-        </div>
-        <button
-          onClick={copyTSV}
-          className="shrink-0 px-2 py-1 rounded text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
-        >
-          {copied ? "✓ Copied" : "📋 Copy"}
-        </button>
-      </div>
+        <div className="flex gap-1 shrink-0">
+  <button
+    onClick={copyTSV}
+    className="px-2 py-1 rounded text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+  >
+    {copied ? "✓ Copied" : "📋 Copy"}
+  </button>
+  <button
+    onClick={downloadCSV}
+    className="px-2 py-1 rounded text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+  >
+    ⬇ CSV
+  </button>
+</div>
 
       {/* scrollable table */}
       <div className="overflow-x-auto">
@@ -94,12 +113,15 @@ export default function StageCard({
 }) {
   const [tablesOpen, setTablesOpen] = useState(true);
 
-  const released = sd?.released && sd?.option;
-  const opt      = sd?.option;
-  const option   = opt ? stage.options[opt] : null;
+  const released = sd?.released;
+const opt      = sd?.option ? String(sd.option).toUpperCase() : null;  // normalise case
+const option   = opt ? stage.options[opt] : null;
 
-  // Tables are pre-merged into option.tables by src/data/stages/index.js
-  const tables = released ? (option?.tables ?? []) : [];
+// If option lookup fails, try first available option as fallback
+const effectiveOption = option ?? Object.values(stage.options || {})[0] ?? null;
+
+// Show tables whenever stage is released (even if option is ambiguous)
+const tables = released ? (effectiveOption?.tables ?? []) : [];
 
   // ── locked state ──
   if (!released) {
@@ -169,14 +191,39 @@ export default function StageCard({
 
         {/* ── data tables ── */}
         {tables.length > 0 && (
-          <div>
-            <button
-              onClick={() => setTablesOpen(o => !o)}
-              className={`flex items-center gap-2 text-xs font-bold ${clr.text} mb-1`}
-            >
-              <span>{tablesOpen ? "▾" : "▸"}</span>
-              <span>📊 DATA TABLES ({tables.length})</span>
-            </button>
+  <div>
+    <div className="flex items-center justify-between mb-1">
+      <button
+        onClick={() => setTablesOpen(o => !o)}
+        className={`flex items-center gap-2 text-xs font-bold ${clr.text}`}
+      >
+        <span>{tablesOpen ? "▾" : "▸"}</span>
+        <span>📊 DATA TABLES ({tables.length})</span>
+      </button>
+      <button
+        onClick={() => {
+          const esc = v => `"${String(v).replace(/"/g,'""')}"`;
+          let csv = "";
+          tables.forEach(t => {
+            csv += `\n# ${t.title}\n`;
+            if (t.note) csv += `# ${t.note}\n`;
+            csv += t.headers.map(esc).join(",") + "\n";
+            csv += t.rows.map(r => r.map(esc).join(",")).join("\n") + "\n";
+          });
+          const blob = new Blob([csv.trim()], { type:"text/csv" });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement("a");
+          a.href = url;
+          a.download = `Stage${stage.id}_${opt || "all"}_tables.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }}
+        className="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 font-medium"
+        title="Download all tables for this stage as a single CSV"
+      >
+        ⬇ All CSV
+      </button>
+    </div>
             {tablesOpen && (
               <div className="space-y-1">
                 {tables.map((tbl, i) => (
