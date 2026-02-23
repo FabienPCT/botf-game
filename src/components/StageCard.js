@@ -1,144 +1,285 @@
 // src/components/StageCard.js
-import DataTable from "./DataTable.js";
+import { useState } from "react";
+// tables are injected into option.tables by src/data/stages/index.js
 
-export default function StageCard({ stage, sd, clr, localIn, onLocalInput, onOpenTrajectory }) {
-  const released = sd?.released && sd?.option;
-  const opt      = sd?.option;
-  const optData  = opt ? stage.options[opt] : null;
+// ── tiny helpers ─────────────────────────────────────────────
+const OPT_COLORS = {
+  A: "bg-yellow-900 border-yellow-600 text-yellow-200",
+  B: "bg-green-900  border-green-600  text-green-200",
+  C: "bg-blue-900   border-blue-600   text-blue-200",
+};
+const OPT_LABEL = { A: "Opt A", B: "Opt B", C: "Opt C" };
+
+// ── DataTable ─────────────────────────────────────────────────
+function DataTable({ table, clr }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyTSV = () => {
+    const lines = [
+      table.headers.join("\t"),
+      ...table.rows.map(r => r.join("\t")),
+    ];
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
 
   return (
-    <div className={`rounded-xl border overflow-hidden transition-all duration-300 fadein ${released ? clr.border : "border-gray-700"}`}>
-
-      {/* Header */}
-      <div className={`px-4 py-3 flex items-center gap-3 ${released ? clr.light : "bg-gray-800"}`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0
-          ${released ? clr.h + " text-white" : "bg-gray-700 text-gray-500"}`}>
-          {stage.id}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className={`font-bold text-sm ${released ? "text-white" : "text-gray-500"}`}>{stage.title}</div>
-          <div className={`text-xs ${released ? "text-gray-400" : "text-gray-600"}`}>Day {stage.day} · {stage.duration}</div>
-        </div>
-        <div className="shrink-0 flex items-center gap-2">
-          {/* Trajectory viewer button — only show for stage 4 (or wherever relevant) */}
-          {released && stage.showTrajectory && onOpenTrajectory && (
-            <button
-              onClick={onOpenTrajectory}
-              className="text-xs font-semibold px-2 py-1 rounded bg-blue-900 text-blue-300 border border-blue-700 hover:bg-blue-800">
-              🛰 Trajectories
-            </button>
+    <div className="mt-3 rounded-lg border border-gray-700 overflow-hidden">
+      {/* table header bar */}
+      <div className="flex items-start justify-between gap-2 px-3 py-2 bg-gray-800 border-b border-gray-700">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-gray-100 leading-snug">{table.title}</p>
+          {table.note && (
+            <p className="text-xs text-gray-400 mt-0.5 leading-snug">{table.note}</p>
           )}
-          {released
-            ? <span className={`text-xs font-bold px-2 py-1 rounded-full ${clr.badge}`}>Opt {opt} – {optData?.label}</span>
-            : <span className="text-xs text-yellow-600 flex items-center gap-1.5 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" style={{animation:"waiting 2s linear infinite"}}></span>
-                Waiting for instructor…
-              </span>
-          }
         </div>
+        <button
+          onClick={copyTSV}
+          className="shrink-0 px-2 py-1 rounded text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+        >
+          {copied ? "✓ Copied" : "📋 Copy"}
+        </button>
       </div>
 
-      {/* Locked state */}
-      {!released && (
-        <div className="bg-gray-900 px-4 py-4 border-t border-gray-800">
-          <div className="w-full rounded-full h-1.5 overflow-hidden mb-2">
-            <div className="waiting-bar h-full rounded-full" />
-          </div>
-          <div className="text-center text-xs text-gray-600">
-            Your instructor will release the input data for this stage shortly
+      {/* scrollable table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="bg-gray-750">
+              {table.headers.map((h, i) => (
+                <th
+                  key={i}
+                  className={`px-2 py-1.5 text-left font-semibold whitespace-nowrap border-b border-gray-700
+                    ${table.highlight?.includes(i)
+                      ? `${clr.text} bg-opacity-20 bg-green-900`
+                      : "text-gray-300"}`}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row, ri) => (
+              <tr
+                key={ri}
+                className={ri % 2 === 0 ? "bg-gray-900" : "bg-gray-850"}
+              >
+                {row.map((cell, ci) => (
+                  <td
+                    key={ci}
+                    className={`px-2 py-1 whitespace-nowrap border-b border-gray-800
+                      ${table.highlight?.includes(ci)
+                        ? `font-bold ${clr.text}`
+                        : "text-gray-200"}`}
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── StageCard ─────────────────────────────────────────────────
+export default function StageCard({
+  stage, sd, clr, teamId,
+  localIn, onLocalInput, onOpenTrajectory,
+}) {
+  const [tablesOpen, setTablesOpen] = useState(true);
+
+  const released = sd?.released && sd?.option;
+  const opt      = sd?.option;
+  const option   = opt ? stage.options[opt] : null;
+
+  // Tables are pre-merged into option.tables by src/data/stages/index.js
+  const tables = released ? (option?.tables ?? []) : [];
+
+  // ── locked state ──
+  if (!released) {
+    return (
+      <div className="rounded-xl border border-gray-700 overflow-hidden">
+        <div className="waiting-bar px-4 py-3 flex items-center gap-3">
+          <span className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-400 shrink-0">
+            {stage.id}
+          </span>
+          <div className="min-w-0">
+            <p className="font-bold text-gray-300 text-sm">{stage.title}</p>
+            <p className="text-xs text-gray-500">Day {stage.day} · {stage.duration} · Waiting for instructor…</p>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Released state */}
-      {released && (
-        <div className="bg-gray-900 px-4 py-3 fadein">
+  // ── released state ──
+  return (
+    <div className={`rounded-xl border ${clr.border} overflow-hidden fadein`}>
 
-          {/* ── Instructor note ── */}
-          {sd?.note && (
-            <div className="mb-3 flex items-start gap-2 bg-yellow-950 border border-yellow-700 rounded-lg px-3 py-2">
-              <span className="text-yellow-400 text-sm shrink-0">📢</span>
-              <p className="text-xs text-yellow-200 leading-relaxed">{sd.note}</p>
-            </div>
-          )}
+      {/* ── card header ── */}
+      <div className={`${clr.h} px-4 py-2.5 flex items-center gap-3`}>
+        <span className="w-7 h-7 rounded-full bg-black bg-opacity-30 flex items-center justify-center text-sm font-bold text-white shrink-0">
+          {stage.id}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-white text-sm leading-snug">{stage.title}</p>
+          <p className="text-xs text-white text-opacity-70">Day {stage.day} · {stage.duration}</p>
+        </div>
+        {opt && (
+          <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded border ${OPT_COLORS[opt]}`}>
+            {OPT_LABEL[opt]} – {option?.label}
+          </span>
+        )}
+      </div>
 
-          {stage.description && <p className="text-xs text-gray-400 mb-3 leading-relaxed">{stage.description}</p>}
+      {/* ── body ── */}
+      <div className={`${clr.light} px-4 py-3 space-y-3`}>
 
-          {/* Option label */}
-          <div className={`text-xs font-bold ${clr.text} mb-3 uppercase tracking-wide flex items-center gap-2`}>
-            <span>📂 Option {opt}: {optData?.label}</span>
-            {optData?.cost > 0 && <span className="text-green-400 normal-case font-normal">({optData.cost} kUSD)</span>}
-          </div>
+        {/* description */}
+        {stage.description && (
+          <p className="text-xs text-gray-400">{stage.description}</p>
+        )}
 
-          {/* Bullet items */}
-          {optData?.items?.length > 0 && (
-            <div className={`${clr.light} rounded-lg p-3 border ${clr.border} space-y-1.5 mb-4`}>
-              {optData.items.map((item, i) => (
-                <div key={i} className={`flex gap-2 text-xs ${item.startsWith("⚠️") ? "text-orange-300" : "text-gray-300"}`}>
-                  <span className="shrink-0 mt-0.5">{item.startsWith("⚠️") ? "" : "•"}</span>
+        {/* option details */}
+        {option && (
+          <div className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5">
+            <p className={`text-xs font-bold uppercase tracking-wide mb-1.5 ${clr.text}`}>
+              📁 Option {opt}: {option.label}
+              <span className="ml-2 font-normal text-gray-400">({option.cost} kUSD)</span>
+            </p>
+            <ul className="space-y-1">
+              {option.items?.map((item, i) => (
+                <li key={i} className="text-xs text-gray-300 flex gap-1.5">
+                  <span className="text-gray-600 shrink-0">•</span>
                   <span>{item}</span>
-                </div>
+                </li>
               ))}
-            </div>
-          )}
+            </ul>
+            {option.penaltyNote && (
+              <p className="mt-2 text-xs text-orange-400 italic">{option.penaltyNote}</p>
+            )}
+          </div>
+        )}
 
-          {/* Data tables */}
-          {optData?.tables?.map((tbl, i) => (
-            <DataTable key={i} table={tbl} clr={clr} />
-          ))}
-
-          {/* Deliverables */}
-          {stage.deliverables && (
-            <div className="mb-3">
-              <div className="text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wide">✅ Deliverables</div>
+        {/* ── data tables ── */}
+        {tables.length > 0 && (
+          <div>
+            <button
+              onClick={() => setTablesOpen(o => !o)}
+              className={`flex items-center gap-2 text-xs font-bold ${clr.text} mb-1`}
+            >
+              <span>{tablesOpen ? "▾" : "▸"}</span>
+              <span>📊 DATA TABLES ({tables.length})</span>
+            </button>
+            {tablesOpen && (
               <div className="space-y-1">
-                {stage.deliverables.map((d, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-gray-300">
-                    <span className="text-green-500 shrink-0 mt-0.5">☐</span><span>{d}</span>
-                  </div>
+                {tables.map((tbl, i) => (
+                  <DataTable key={i} table={tbl} clr={clr} />
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
-          {/* Team input */}
-          {stage.hasTeamInput && (
-            <div className={`mt-3 pt-3 border-t ${clr.border}`}>
-              <div className={`text-xs font-bold ${clr.text} mb-2 uppercase tracking-wide`}>📝 Submit Your Answer</div>
-              <div className="flex gap-3 flex-wrap items-center">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-400">{stage.teamInputLabel}:</label>
-                  <input
-                    className={`bg-gray-800 border ${clr.border} ${clr.text} text-sm font-bold rounded px-2 py-1 w-28 focus:outline-none`}
-                    placeholder="e.g. 1828"
-                    value={localIn?.md || ""}
-                    onChange={e => onLocalInput(stage.id, "md", e.target.value)} />
-                </div>
-                {stage.tortuosityOptions && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-gray-400">Tortuosity:</label>
-                    <select
-                      className={`bg-gray-800 border ${clr.border} ${clr.text} text-xs rounded px-2 py-1 focus:outline-none`}
-                      value={localIn?.tortuosity || ""}
-                      onChange={e => onLocalInput(stage.id, "tortuosity", e.target.value)}>
-                      <option value="">— Select —</option>
-                      {stage.tortuosityOptions.map(o => <option key={o}>{o}</option>)}
-                    </select>
-                  </div>
-                )}
-              </div>
-              {(localIn?.md || localIn?.tortuosity) && (
-                <div className={`mt-2 text-xs ${clr.text} ${clr.light} rounded px-2 py-1.5 inline-flex items-center gap-2 border ${clr.border}`}>
-                  <span>Recorded:</span>
-                  {localIn.md && <strong>{localIn.md}m</strong>}
-                  {localIn.tortuosity && <span>| {localIn.tortuosity}</span>}
-                  <span className="text-gray-500">→ show to your instructor</span>
-                </div>
-              )}
+        {/* trajectory viewer shortcut — shown for stage 4 */}
+        {stage.id === 4 && (
+          <button
+            onClick={onOpenTrajectory}
+            className={`w-full text-xs font-semibold py-2 rounded-lg border ${clr.border} ${clr.btn} text-white`}
+          >
+            🛰 Open Trajectory Viewer
+          </button>
+        )}
+
+        {/* pitfalls */}
+        {stage.pitfalls?.length > 0 && (
+          <div className="rounded-lg border border-yellow-800 bg-yellow-950 bg-opacity-40 px-3 py-2">
+            <p className="text-xs font-bold text-yellow-400 mb-1">⚠️ WATCH OUT</p>
+            <ul className="space-y-0.5">
+              {stage.pitfalls.map((p, i) => (
+                <li key={i} className="text-xs text-yellow-300 flex gap-1.5">
+                  <span className="shrink-0 text-yellow-600">•</span>{p}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* deliverables */}
+        {stage.deliverables?.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">
+              ✅ Deliverables
+            </p>
+            <ul className="space-y-1">
+              {stage.deliverables.map((d, i) => {
+                const key   = `${stage.id}_del_${i}`;
+                const done  = localIn?.[key] ?? false;
+                return (
+                  <li key={i} className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={done}
+                      onChange={e => onLocalInput(stage.id, key, e.target.checked)}
+                      className="mt-0.5 accent-green-500 shrink-0"
+                    />
+                    <span className={`text-xs ${done ? "line-through text-gray-600" : "text-gray-300"}`}>
+                      {d}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {/* team input fields (Stage 10 / 13) */}
+        {stage.hasTeamInput && (
+          <div>
+            <label className="text-xs font-bold text-gray-400 block mb-1">
+              📝 {stage.teamInputLabel}
+            </label>
+            <input
+              type="text"
+              value={localIn?.teamInput ?? ""}
+              onChange={e => onLocalInput(stage.id, "teamInput", e.target.value)}
+              placeholder="Enter value…"
+              className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-green-500"
+            />
+          </div>
+        )}
+
+        {/* tortuosity options (Stage 10) */}
+        {stage.tortuosityOptions && (
+          <div>
+            <p className="text-xs font-bold text-gray-400 mb-1">🔧 Tortuosity Assessment</p>
+            <div className="flex flex-wrap gap-2">
+              {stage.tortuosityOptions.map(opt => {
+                const active = localIn?.tortuosity === opt;
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => onLocalInput(stage.id, "tortuosity", opt)}
+                    className={`text-xs px-3 py-1 rounded border font-medium transition-colors
+                      ${active
+                        ? `${clr.btn} ${clr.border} text-white`
+                        : "border-gray-700 bg-gray-800 text-gray-400 hover:text-gray-200"}`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
