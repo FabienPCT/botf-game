@@ -69,7 +69,7 @@ export const STAGE_OPTIONS = {
     A:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
     B:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
     C:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
-  } */,
+  } */
   13: {
     A:{ label:"Option A", cost:0, penalty:0, timePenalty:1.25, penaltyNote:"TBD" },
     B:{ label:"Option B", cost:0, penalty:0, timePenalty:1.5,  penaltyNote:"TBD" },
