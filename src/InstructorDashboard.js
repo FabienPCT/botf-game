@@ -11,6 +11,7 @@ import TabTimeline  from "./instructor/TabTimeline";
 import TabCosts     from "./instructor/TabCosts";
 import TabPenalties from "./instructor/TabPenalties";
 import TabChat      from "./instructor/TabChat";
+import TabRWPlanning from "./instructor/TabRWPlanning";
 
 const COL = "botf";
 
@@ -363,6 +364,7 @@ export default function InstructorDashboard() {
         {tab==="costs"     && <TabCosts     state={state} calcCost={calcCost} calcDays={calcDays} />}
         {tab==="penalties" && <TabPenalties state={state} />}
         {tab==="chat"      && <TabChat      chat={chat}   onSend={sendChat} />}
+		{tab==="rwplanning"&& <TabRWPlanning />} 
         {tab==="session"   && <SessionPanel liveState={state} setLiveState={setState} />}
       </div>
     </div>

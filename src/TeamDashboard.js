@@ -157,6 +157,7 @@ export default function TeamDashboard() {
             stage={stage}
             sd={getSD(stage.id)}
             clr={clr}
+			teamId={teamId} 
             localIn={localInputs[stage.id]}
             onLocalInput={setLocalInput}
             onOpenTrajectory={() => setShowTrajectory(true)} />

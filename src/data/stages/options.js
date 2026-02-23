@@ -54,6 +54,13 @@ export const STAGE_OPTIONS = {
     C:{ label:"Full Assessment",      cost:25, penalty:0, timePenalty:0, penaltyNote:"Interception <5m → no additional penalty" },
   },
   11: {
+   A:{ label:"Shallow hazard map + slope + metocean", cost:0, penalty:0, timePenalty:0, penaltyNote:"Surface location submitted" },
+ },
+ 12: {
+   A:{ label:"RW trajectory (MD/Inc/Azi every 30m)", cost:0, penalty:0, timePenalty:0, penaltyNote:"Trajectory submitted" },
+ },
+ /*  
+  11: {
     A:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
     B:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
     C:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
@@ -62,7 +69,7 @@ export const STAGE_OPTIONS = {
     A:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
     B:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
     C:{ label:"TBD", cost:0, penalty:0, timePenalty:0, penaltyNote:"TBD" },
-  },
+  } */,
   13: {
     A:{ label:"Option A", cost:0, penalty:0, timePenalty:1.25, penaltyNote:"TBD" },
     B:{ label:"Option B", cost:0, penalty:0, timePenalty:1.5,  penaltyNote:"TBD" },
